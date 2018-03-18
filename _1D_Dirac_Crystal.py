@@ -375,7 +375,6 @@ class Crystal:
             Tuple of wave function vector, x-grid and r-grid.
 
         """
-        begin_1 = time.time()
         "---Set grid---"
         if not N: N = 250 * len(self.A)
         x_max =  self.max_range_for_e(e, N_nodes) + max(self.A)
@@ -401,11 +400,9 @@ class Crystal:
                          self.WhittakerW(kappa, mu, 2*np.abs(x_min)*korr))
         psi[0][1][0] = 0.1
 
-        begin_2 = time.time()
         "---Solve equation for given energy---"
         self.RK4(psi, x, r[2]-r[0], e)
 
-        print("Set grid time / Overall time = ", 100 * (begin_2 - begin_1) // (time.time() - begin_1))
         return psi, x[::2], r[::2]
 
     def find_energy(self, num, e_bounds):
@@ -455,7 +452,7 @@ class Crystal:
 
     "---Ancillary function to calculate and save data for LDOS---"
     def calculate_and_save(self, i, data_dir):
-        """Calculate and save data for given level.
+        """Calculate and save LDOS data for given level.
 
         Args:
             i: level number.
@@ -476,10 +473,10 @@ class Crystal:
         # save data for LDOS
         with open(data_dir + '/' + str(i) + '.txt', 'w') as out:
             out.write(str(e) + '\n')
-            out.write(' '.join([str(x_i) for x_i in x]))
+            out.write(' '.join([str(x_i) for x_i in x]) + '\n')
             out.write(' '.join([str(psi_i[0][0]**2 + psi_i[1][0]**2) for psi_i in psi]))
 
-    def data_for_LDOS(self, N_nodes, Z_p, A, Z, LDOS_dir=None):
+    def data_for_LDOS(self, N_nodes, LDOS_dir=None):
         """Calculate and save data needed for LDOS plotting.
 
         Args:
@@ -487,21 +484,16 @@ class Crystal:
             LDOS_dir: directory for LDOS data.
 
         """
-        data_dir = self.crystal_dir() + '/LDOS/data'
-        '---Create directory for results---'
         # use default name if not given
         if not LDOS_dir:
-            LDOS_dir = './Results/LDOS/' + str(self.DELTA) + '/' + \
-                       '_'.join([str(a) for a in A]) + '_'.join([str(z) for z in Z])
-        if not os.path.exists(LDOS_dir):
-            os.makedirs(LDOS_dir)
+            LDOS_dir = self.crystal_dir() + '/LDOS/data'
 
         "---Calculate and save data in parallel---"
         cpu_count = mp.cpu_count()
         for chunk in Crystal.chunks(range(1, N_nodes+1), cpu_count):
             processes = []
             for i in chunk:
-                proc = mp.Process(target=self.calculate_and_save, args=(i, Z_p, A, Z, data_dir))
+                proc = mp.Process(target=self.calculate_and_save, args=(i, LDOS_dir))
                 processes.append(proc)
                 proc.start()
             for proc in processes:
@@ -514,7 +506,7 @@ class Crystal:
             yield l[i:i + n]
 
 
-    def plot_LDOS(self, filenames=None):
+    def plot_LDOS(self, level_rng, filenames=None):
         """Plot local density of states (LDOS).
 
         Args:
@@ -526,11 +518,11 @@ class Crystal:
         e_lst = []
         x_lst = []
         rho_lst = []
-        X = []
 
         if not filenames:
-            data_dir = self.crystal_dir() + '/LDOS/data'
-            filenames = [data_dir + f for f in os.listdir(data_dir) if os.path.isfile(data_dir + f)]
+            data_dir = self.crystal_dir() + '/LDOS/data/'
+            filenames = [data_dir + f for f in os.listdir(data_dir) \
+                         if os.path.isfile(data_dir + f) and int(f.split('.')[0]) in level_rng]
             delta = self.DELTA
         else:
             A = []
@@ -544,7 +536,7 @@ class Crystal:
         if len(filenames) == 0:
             sys.exit()
 
-        print("Charges: ", [(a, z) for a, z in zip(A, Z)])
+        print("Charges: ", [(a, z) for a, z in zip(self.A, self.Z)])
         print("Delta = ", delta)
         print("\n")
 
@@ -556,13 +548,18 @@ class Crystal:
 
             e_lst.append(e)
             x_lst.append(x)
-            X.extend(x)
             rho_lst.append(rho)
 
         print('Finished reading.')
-        X = x_lst[-1] # sorted(list(set(X)))
-        delta_e = e_lst[-1] - e_lst[0]
-        e_grid = np.linspace(e_lst[0] - 0.001*delta_e, e_lst[-1] + 0.001*delta_e, e_grid_N)
+        max_range_idx = 0
+        max_range = 0
+        for i, val in enumerate(x_lst):
+            if val[-1] > max_range:
+                max_range = val[-1]
+                max_range_idx = i
+        X = x_lst[max_range_idx] # sorted(list(set(X)))
+        delta_e = max(e_lst) - min(e_lst)
+        e_grid = np.linspace(min(e_lst) - 0.001*delta_e, max(e_lst) + 0.001*delta_e, e_grid_N)
 
         N = len(X)
         num_of_levels = len(e_lst)
@@ -587,7 +584,7 @@ class Crystal:
         for e_i in range(e_grid_N):
             for x_i in range(N):
                 for level in range(num_of_levels):
-                    LDOS[e_i][x_i] += rho_lst[level][x_i] * Crystal.delta_func(e_lst[level], e_grid[e_i])
+                    LDOS[e_i][x_i] += rho_lst[level][x_i] * Crystal.delta_func(self, e_lst[level], e_grid[e_i])
 
         # log(LDOS)
         for e_i in range(e_grid_N):
@@ -597,13 +594,14 @@ class Crystal:
 
         "---Plot LDOS as color plot---"
         # e_grid = [log_transform(e, 10, 1) for e in e_grid]
-        plt.contourf(x, e_grid, LDOS, 1000)
+        plt.contourf(X, e_grid, LDOS, 1000)
         # plt.colorbar()
         plt.title(r'$\delta = {0} \lambdabar_c$'.format(delta), fontsize = 30,  verticalalignment = 'bottom')
         plt.xlabel(r'$x$', fontsize = 30, labelpad=-5)
         plt.ylabel(r'$\epsilon$  ', rotation='horizontal', \
                    verticalalignment = 'bottom', horizontalalignment='right', fontsize = 30)
         # plt.yscale('log')
+        plt.show()
 
 
     "New data type"

@@ -46,25 +46,26 @@ class TwoSameImpurities(Crystal):
         """Turn x into r.
 
         Args:
-            x - point of evaluation.
+            x: point of evaluation.
 
         Returns:
             r(x).
 
         """
         R = np.abs(self.A[0])
+        Z_i = self.Z[0]
         if x < -R:
-            return np.log(self.DELTA**2 / ((self.DELTA - R - x) * (R - x + self.DELTA)))
+            return Z_i * np.log(self.DELTA**2 / ((self.DELTA - R - x) * (R - x + self.DELTA)))
         elif x < R:
-            return np.log((x + R + self.DELTA) / (R - x + self.DELTA))
+            return Z_i * np.log((x + R + self.DELTA) / (R - x + self.DELTA))
         else:
-            return np.log((self.DELTA + R + x) * (x - R + self.DELTA) / self.DELTA**2)
+            return Z_i * np.log((self.DELTA + R + x) * (x - R + self.DELTA) / self.DELTA**2)
 
     def r_2_x(self, r):
         """Turn r into x.
 
         Args:
-            r - point of evaluation.
+            r: point of evaluation.
 
         Returns:
             x(r).
@@ -72,14 +73,16 @@ class TwoSameImpurities(Crystal):
         """
         R = np.abs(self.A[0])
         R_2_r = self.x_2_r(R)
+        Z_i = self.Z[0]
         if r < -R_2_r:
-            return self.DELTA - np.sqrt(self.DELTA**2 * np.exp(-r) + R**2)
+            return self.DELTA - np.sqrt(self.DELTA**2 * np.exp(-r/Z_i) + R**2)
         elif r < R_2_r:
-            return (R + self.DELTA) * np.tanh(r/2)
+            return (R + self.DELTA) * np.tanh(r/(2*Z_i))
         else:
-            return np.sqrt(self.DELTA**2 * np.exp(r) + R**2) - self.DELTA
+            return np.sqrt(self.DELTA**2 * np.exp(r/Z_i) + R**2) - self.DELTA
 
-    def user_interface(self):
+    @staticmethod
+    def user_interface():
         """Function to get parameters from user and solve Dirac equation numerically."""
         while True:
             "---Ask user for parameters---"
@@ -89,10 +92,10 @@ class TwoSameImpurities(Crystal):
             N = 1 + int(input('Enter the number of grid points: '))
             N_nodes = int(input('Enter the number of nodes: '))
 
+            # create crystal
+            crystal = TwoSameImpurities(R, Z_i, Z_p)
             '---Solve equation---'
-            self.A = [-R, R]
-            self.Z = [Z_i, Z_i]
-            (e, de, psi, r, x) = self.calculate(N, N_nodes)
+            (e, de, psi, r, x) = crystal.calculate(N, N_nodes)
 
             "---Print results and save them to file---"
             '-Print results-'
@@ -104,7 +107,7 @@ class TwoSameImpurities(Crystal):
             plt.plot(x, [psi[i][1][0] for i in range(N)], 'b')
             # plt.plot(x, [pow(psi[i][0][0], 2) + pow(psi[i][1][0], 2) for i in range(N)], 'b')
             plt.gcf().subplots_adjust(bottom=0.15)
-            plt.title(r'$\delta = {0} \lambdabar_c, Z = {1}, R = {2} \lambdabar_c$'.format(self.DELTA, Z_i*Z_p, R), \
+            plt.title(r'$\delta = {0} \lambdabar_c, Z = {1}, R = {2} \lambdabar_c$'.format(crystal.DELTA, Z_i*Z_p, R), \
                       fontsize = 30,  verticalalignment = 'bottom')
             plt.xlabel(r'$x (\lambdabar_c)$', fontsize = 30)
             plt.ylabel(r'$\psi$  ', rotation='horizontal', verticalalignment = 'bottom', fontsize = 30)
@@ -123,10 +126,10 @@ class TwoSameImpurities(Crystal):
                     os.makedirs('./Results/1D_two_charges')
 
                 now = datetime.datetime.now()
-                with open('./Results/1D_two_charges/' + self.round_seconds(now) + '.txt', 'w') as out:
+                with open('./Results/1D_two_charges/' + crystal.round_seconds(now) + '.txt', 'w') as out:
                     out.write(str(e) + '\n')
-                    out.write(str(R/self.X_MULT) + '\n')
-                    out.write(str(self.DELTA/self.X_MULT) + '\n')
+                    out.write(str(R/crystal.X_MULT) + '\n')
+                    out.write(str(crystal.DELTA/crystal.X_MULT) + '\n')
                     out.write(str(N) + '\n')
                     out.write(str(N_nodes) + '\n\n')
                     for i in range(N):
@@ -143,20 +146,29 @@ class TwoSameImpurities(Crystal):
 
     @staticmethod
     def asymp_func(x, e, q):
-        """Asymptotic wave function for case of two equal charges
-            x - point of evaluation
-            e - energy of particle
+        """Asymptotic wave function for case of two equal charges.
+
+        Args:
+            x: point of evaluation
+            e: energy of particle
             q = Z_p * Z_i * FINE_STRUCTURE_CONSTANT, where
-            Z_p - charge of particle in elementary charge units
-            Z_i - charge of impurity in elementary charge units
+                Z_p - charge of particle in elementary charge units
+                Z_i - charge of impurity in elementary charge units
+
+        Returns:
+            Value of asymptotic wave function.
+
         """
         kor = pow(1 - e*e, 0.5)
         return np.sign(x) * np.exp(-np.abs(x)*kor) * pow(np.abs(x), 2*q*e/kor)
 
     def plot_asymp(self, e, Z_p, Z_i, x_max, A, Z):
         """Plot asymptotic wave function.
-            e - energy of particle.
-            x_max - right border of plotting. Due to symmetry: x_min = -x_max.
+
+        Args:
+            e: energy of particle.
+            x_max: right border of plotting. Due to symmetry: x_min = -x_max.
+
         """
         q = Z_p * Z_i * self.FINE_STRUCTURE_CONSTANT
         r_max = self.x_2_r(x_max)
@@ -443,33 +455,3 @@ class TwoSameImpurities(Crystal):
         plt.ylabel(r'$Z_{cr}$  ', rotation='horizontal', \
                    verticalalignment = 'bottom', horizontalalignment='right', fontsize = 30)
         plt.show()
-
-
-if __name__ == "__main__":
-    # R_lst = np.linspace(0, 1, 11)
-    # args = [(14, 1, 7, r) for r in R_lst]
-    #
-    # p = mp.Pool(3)
-    # p.starmap(data_for_LDOS, args)
-    user_interface()
-    log_transform()
-    # A = [-0.1, 0.1]
-    # Z = [10, 10]
-    # create_file_tree(A, Z)
-    # Zcr_from_R(-1, 0, 5, 40)
-    # data_for_LDOS(12, -1, A, Z)
-
-    # energies = find_energy(10, Bounds(up=1.0-1e-10, down=-1.0+1e-10), -1, A, Z, None)
-    # print(energies)
-    # for e in energies:
-    #     psi, x, _ = calculate_for_given_energy(e, -1, A, Z, 1)
-    #     plot_wave_function(psi, x)
-
-    # plot_level('./Results/alpha=0.00729735256672/delta=0.01/(-0.1,10) (0.1,10)/levels/data/8.txt')
-    # plot_for_given_energy()
-    # find_energy()
-    # e_from_R()
-    # e_from_Z()
-    # Zcr_from_R(0, 15, 300)
-    # plot_Zcr_from_R('./Results/Zcr_from_R/18.txt')
-    # print(find_Zcr(0, Bounds(up=20, down=0.0001)))
