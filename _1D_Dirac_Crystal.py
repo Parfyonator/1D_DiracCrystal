@@ -356,7 +356,7 @@ class Crystal:
 
             "---Plot results---"
             # print(e)
-            # plt.plot(x[::2], [psi[i][0][0] for i in range(N)], 'r'); plt.show(block=False); plt.pause(0.1); plt.clf()
+            # plt.plot(x, [psi[i][0][0] for i in range(N)], 'r'); plt.show(block=False); plt.pause(0.1); plt.clf()
 
         "---Normalize wave functions---"
         self.normalize(psi, x)

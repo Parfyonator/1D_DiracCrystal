@@ -25,9 +25,9 @@ class TwoSameImpurities(Crystal):
         curr_dir = super(TwoSameImpurities, self).create_file_tree()
         curr_dir = curr_dir[:curr_dir.rfind('/')]
 
-        Crystal.create_dir(curr_dir + '/e_vs_Zcr')
-        Crystal.create_dir(curr_dir + '/e_vs_Zcr/data')
-        Crystal.create_dir(curr_dir + '/e_vs_Zcr/plots')
+        Crystal.create_dir(curr_dir + '/e_vs_Z')
+        Crystal.create_dir(curr_dir + '/e_vs_Z/data')
+        Crystal.create_dir(curr_dir + '/e_vs_Z/plots')
 
         Crystal.create_dir(curr_dir + '/e_vs_R')
         Crystal.create_dir(curr_dir + '/e_vs_R/data')
@@ -111,7 +111,6 @@ class TwoSameImpurities(Crystal):
                       fontsize = 30,  verticalalignment = 'bottom')
             plt.xlabel(r'$x (\lambdabar_c)$', fontsize = 30)
             plt.ylabel(r'$\psi$  ', rotation='horizontal', verticalalignment = 'bottom', fontsize = 30)
-            # plot_asymp(e, q, x_max, R)
             plt.show()
 
             "---Ask user if he wants to save reults---"
@@ -121,19 +120,10 @@ class TwoSameImpurities(Crystal):
                     break
 
             if choise == 'y':
+                '-Create file tree-'
+                crystal.create_file_tree()
                 '-Save results to file-'
-                if not os.path.exists('./Results/1D_two_charges'):
-                    os.makedirs('./Results/1D_two_charges')
-
-                now = datetime.datetime.now()
-                with open('./Results/1D_two_charges/' + crystal.round_seconds(now) + '.txt', 'w') as out:
-                    out.write(str(e) + '\n')
-                    out.write(str(R/crystal.X_MULT) + '\n')
-                    out.write(str(crystal.DELTA/crystal.X_MULT) + '\n')
-                    out.write(str(N) + '\n')
-                    out.write(str(N_nodes) + '\n\n')
-                    for i in range(N):
-                        out.write(str(r[i]) + ' ' + str(x[i]) + ' ' + str(psi[i][0][0]) + ' ' + str(psi[i][1][0]) + '\n')
+                crystal.save_level(e, N_nodes, psi, x)
 
             "---Ask user if he wants to exit program---"
             while True:
@@ -179,26 +169,57 @@ class TwoSameImpurities(Crystal):
         plt.plot(x, f, 'g')
 
     @staticmethod
-    def e_from_R(Z_i, Z_p, R_max, N, filename=None):
+    def e_f_R(Z_i, Z_p, R_lst, e_lst, nproc, proc_id):
+        """Ancillary function for e_from_R.
+
+        Args:
+            Z_i: impurity charge in elementary charge units.
+            Z_p: charge of particle in elementary charge units.
+            R_lst: list of impurity positions.
+            e_lst: list of energy values.
+            nproc: number of processes.
+            proc_id: current process id.
+
+        """
+        N = len(R_lst)
+        crystal = TwoSameImpurities(0, Z_i, Z_p)
+
+        for i in range(proc_id, N, nproc):
+            print(i)
+            crystal.A = [-R_lst[i], R_lst[i]]
+            e, _, _, _, _ = crystal.calculate(None, 1)
+            e_lst[i] = e
+
+    @staticmethod
+    def e_from_R(Z_i, Z_p, R_min, R_max, N, filename=None):
         """Calculate ground level energy dependence on distance between impurities.
 
         Args:
             Z_i: impurity charge in elementary charge units.
             Z_p: charge of particle in elementary charge units.
+            R_min: minimum impurity position.
             R_max: maximum impurity position.
-            N: number of steps from 0 to R_max.
+            N: number of steps from R_min to R_max.
             filename: path of file to save data to.
 
         """
-        crystal = TwoSameImpurities(0, Z_i, -Z_p)
-        e_lst = []
-        R_lst = np.linspace(0, R_max, N)
+        nproc = mp.cpu_count()
+        processes = []
+        manager = mp.Manager()
+        crystal = TwoSameImpurities(0, Z_i, Z_p)
+        e_lst = manager.list([0]*(N+1))
+
+        r = np.linspace(crystal.x_2_r(R_min), crystal.x_2_r(R_max), N+1)
+        R_lst = manager.list([crystal.r_2_x(rr) for rr in r])
+
         e_vs_R_data_dir = crystal.delta_dir() + '/e_vs_R/data/'
 
-        for R in R_lst:
-            crystal.A = [-R, R]
-            (e_i, de_i, psi, r, x) = crystal.calculate(None, 1)
-            e_lst.append(e_i)
+        for i in range(nproc):
+            proc = mp.Process(target=TwoSameImpurities.e_f_R, args=(Z_i, Z_p, R_lst, e_lst, nproc, i))
+            processes.append(proc)
+            proc.start()
+        for proc in processes:
+            proc.join()
 
         '---Save results---'
         # use default filename if not given
@@ -221,7 +242,7 @@ class TwoSameImpurities(Crystal):
             e_lst: list of energy values.
 
         """
-        plt.title(r'$\delta = {0} \lambdabar_c, \Z_i = {1}$'.format(dlt, Z_i), \
+        plt.title(r'$\delta = {0} \lambdabar_c, Z_i = {1}$'.format(dlt, Z_i), \
                   fontsize = 30,  verticalalignment = 'bottom')
         plt.xlabel(r'$R (\lambdabar_c)$', fontsize = 30)
         plt.ylabel(r'$\epsilon$  ', rotation='horizontal', \
@@ -251,28 +272,58 @@ class TwoSameImpurities(Crystal):
         return dlt, Z_i, R_lst, e_lst
 
     @staticmethod
-    def e_from_Z(Z_max, R, Z_p, filename=None):
+    def e_f_Z(R, Z_p, Z_lst, e_lst, nproc, proc_id):
+        """Ancillary function for e_from_Z.
+
+        Args:
+            R: impurity position.
+            Z_p: charge of particle in elementary charge units.
+            Z_lst: list of impurity charge values.
+            e_lst: list of impurity positions.
+            nproc: number of processes.
+            proc_id: current process id.
+
+        """
+        N = len(Z_lst)
+        crystal = TwoSameImpurities(R, 0, Z_p)
+
+        for i in range(proc_id, N, nproc):
+            print(i)
+            crystal.Z = [Z_lst[i], Z_lst[i]]
+            e, _, _, _, _ = crystal.calculate(None, 1)
+            e_lst[i] = e
+
+    @staticmethod
+    def e_from_Z(Z_min, Z_max, R, Z_p, N, filename=None):
         '''Calculate ground level energy dependence on distance between impurities.
 
         Args:
+            Z_min: minimum value of impurity charge.
             Z_max: maximum value of impurity charge.
             R: impurity position.
             Z_p: charge of particle in elementary charge units.
+            N: number of steps from Z_min to Z_max.
             filename: path of file to save data to.
 
         '''
-        crystal = TwoSameImpurities(R, 0, Z_p)
-        e_lst = []
-        Z_lst = [i for i in range(0, Z_max)]
+        nproc = mp.cpu_count()
+        processes = []
+        manager = mp.Manager()
+        crystal = TwoSameImpurities(0, Z_max, Z_p)
+        e_lst = manager.list([0]*(N+1))
+
+        # r = np.linspace(crystal.x_2_r(R_min), crystal.x_2_r(R_max), N+1)
+        # R_lst = manager.list([crystal.r_2_x(rr) for rr in r])
+        Z_lst = manager.list(np.linspace(Z_min, Z_max, N+1))
+
         e_vs_Z_data_dir = crystal.delta_dir() + '/e_vs_Z/data/'
 
-        for Z in Z_lst:
-            if Z == 0:
-                e_lst.append(1)
-            else:
-                crystal.Z = [Z, Z]
-                (e_i, de_i, psi, r, x) = crystal.calculate(None, 1)
-                e_lst.append(e_i)
+        for i in range(nproc):
+            proc = mp.Process(target=TwoSameImpurities.e_f_R, args=(R, Z_p, Z_lst, e_lst, nproc, i))
+            processes.append(proc)
+            proc.start()
+        for proc in processes:
+            proc.join()
 
         '---Save results---'
         # use default filename if not given
@@ -295,7 +346,8 @@ class TwoSameImpurities(Crystal):
             e_lst: list of energy values.
 
         """
-        plt.title(r'$\delta = {0} \lambdabar_c, \R = {1}$'.format(dlt, R), fontsize = 30,  verticalalignment = 'bottom')
+        plt.title(r'$\delta = {0} \lambdabar_c, R = {1} \lambdabar_c$'.format(dlt, R), \
+                  fontsize = 30,  verticalalignment = 'bottom')
         plt.xlabel('Z', fontsize = 30)
         plt.ylabel(r'$\epsilon$  ', rotation='horizontal', \
                    verticalalignment = 'bottom', horizontalalignment='right', fontsize = 30)
@@ -323,6 +375,15 @@ class TwoSameImpurities(Crystal):
 
         return dlt, R, Z_lst, e_lst
 
+    def Zcr_analytical_upper_bound(self):
+        """Gives analytical upper bound of critical charge.
+
+        Returns:
+            Analytical upper bound of critical charge.
+
+        """
+        return np.pi*0.5 / (np.log(0.5/self.DELTA) * self.FINE_STRUCTURE_CONSTANT * np.abs(self.Z_p))
+
     def find_Zcr(self, Z_bounds):
         """Find critical charge for given impurity position.
 
@@ -333,16 +394,32 @@ class TwoSameImpurities(Crystal):
             Critical charge.
 
         """
-        while (Z_bounds.up - Z_bounds.down) > 0.01:
-            Z = (Z_bounds.up + Z_bounds.down) / 2
-            self.Z = [Z, Z]
-            (e, de, psi, r, x) = self.calculate(None, 1)
-            if e <= -1:
-                Z_bounds.up = Z
-            else:
-                Z_bounds.down = Z
+        Z = Z_bounds.down
 
-        return Z_bounds.up
+        self.Z = [Z, Z]
+        psi, _, _ = self.calculate_for_given_energy(-0.99999, 1)
+        init_sign = np.sign(psi[-1][0][0])
+        init_count = self.nodes_count([psi_i[0][0] for psi_i in psi])
+        while Z_bounds.up - Z_bounds.down > 1e-5:
+            Z = (Z_bounds.down + Z_bounds.up) / 2
+            self.Z = [Z, Z]
+            psi, x, _ = self.calculate_for_given_energy(-0.999, 1)
+            # plt.plot(x, [psi_i[0][0] for psi_i in psi])
+            # plt.show(block=False)
+            # plt.pause(0.1)
+            # plt.clf()
+            count = self.nodes_count([psi_i[0][0] for psi_i in psi])
+
+            if np.sign(psi[-1][0][0]) * init_sign >= 0:
+                if count >= init_count:
+                    init_count = count
+                    Z_bounds.down = Z
+                else:
+                    Z_bounds.up = Z
+            else:
+                Z_bounds.up = Z
+
+        return (Z_bounds.up + Z_bounds.down) / 2
 
     @staticmethod
     def Z_f_R(Z_p, R_lst, Z_lst, nproc, proc_id):
@@ -366,7 +443,7 @@ class TwoSameImpurities(Crystal):
             if i in range(0, nproc):
                 Z_down = Z_lst[0]
             else:
-                Z_down = Z_lst[i - 1]
+                Z_down = Z_lst[i - nproc]
 
             crystal.A = [-R_lst[i], R_lst[i]]
             Z_lst[i] = crystal.find_Zcr(Crystal.Bounds(up = Z_up, down = Z_down))
@@ -383,21 +460,24 @@ class TwoSameImpurities(Crystal):
             filename: path of file to save data to.
 
         """
-        global Zcr_lst
-        global R_lst
-
         nproc = mp.cpu_count()
         processes = []
         manager = mp.Manager()
-        Zcr_lst = manager.list([0]*(N+1))
-        R_lst = manager.list(np.linspace(R_min, R_max, N + 1))
-        Zcr_vs_R_data_dir = TwoSameImpurities.delta_dir() + '/Zcr_vs_R/data/'
         crystal = TwoSameImpurities(0, 0, Z_p)
+        Zcr_lst = manager.list([0]*(N+1))
+
+        Zcr_upper = crystal.Zcr_analytical_upper_bound()
+        crystal.Z = [Zcr_upper/2] * 2
+        r = np.linspace(crystal.x_2_r(R_min), crystal.x_2_r(R_max), N+1)
+        R_lst = manager.list([crystal.r_2_x(rr) for rr in r])
+
+        Zcr_vs_R_data_dir = TwoSameImpurities.delta_dir() + '/Zcr_vs_R/data/'
 
         crystal.A = [-R_max, R_max]
-        Z_up = crystal.find_Zcr(Crystal.Bounds(up = np.pi*0.5 / np.log(0.5/crystal.DELTA), down = 0.001))
+        Z_up = crystal.find_Zcr(Crystal.Bounds(up = Zcr_upper, down = (Zcr_upper + 0.1) / 2))
+
         crystal.A = [-R_min, R_min]
-        Z_down = crystal.find_Zcr(Crystal.Bounds(up = np.pi*0.5 / np.log(0.5/crystal.DELTA), down = 0.001))
+        Z_down = crystal.find_Zcr(Crystal.Bounds(up = Z_up, down = (Z_up - 0.01) / 2))
 
         print("Z_up = ", Z_up)
         print("Z_down = ", Z_down)
