@@ -1,16 +1,10 @@
 """
-TODO:
-    - enhance system of saving and storing information
-    - error handling
-    - solve "find_energy" and "calculate" issues with N_nodes.
-      Make range estimation only by energy and crystal parameters
-
 Chiral representation is used:
 d  || psi_1 ||   ||     0          m - E + V(x) ||   || psi_1 ||
 -- ||       || = ||                             || * ||       ||
 dx || psi_2 ||   || m + E - V(x)       0        ||   || psi_2 ||
 
-V(x) = - q( 1 / (|x+R| + delta) + 1 / (|x-R| + delta) ) (q = Z1 * Z2 * e^2)
+V(x) = - e^2 * sum_by_impurities( Z_i / (|x-a_i| + delta) )
 
 Change of variable:
 r(x) = sum_by_impurities( Z_i * sign(x-a_i) * ln( (|x-a_i| + delta) / delta ) )
