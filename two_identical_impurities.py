@@ -40,7 +40,8 @@ class TwoSameImpurities(Crystal):
     @staticmethod
     def delta_dir():
         """Delta directory."""
-        return './Results/alpha=' + str(Crystal.FINE_STRUCTURE_CONSTANT) + '/delta=' + str(Crystal.DELTA)
+        return './Results/alpha=' + str(Crystal.FINE_STRUCTURE_CONSTANT) + \
+               '/delta=' + str(Crystal.DELTA)
 
     def x_2_r(self, x):
         """Turn x into r.
@@ -55,11 +56,13 @@ class TwoSameImpurities(Crystal):
         R = np.abs(self.A[0])
         Z_i = self.Z[0]
         if x < -R:
-            return Z_i * np.log(self.DELTA**2 / ((self.DELTA - R - x) * (R - x + self.DELTA)))
+            return Z_i * np.log(self.DELTA**2 / ((self.DELTA - R - x) * \
+                                                 (R - x + self.DELTA)))
         elif x < R:
             return Z_i * np.log((x + R + self.DELTA) / (R - x + self.DELTA))
         else:
-            return Z_i * np.log((self.DELTA + R + x) * (x - R + self.DELTA) / self.DELTA**2)
+            return Z_i * np.log((self.DELTA + R + x) * (x - R + self.DELTA) /\
+                                self.DELTA**2)
 
     def r_2_x(self, r):
         """Turn r into x.
@@ -88,7 +91,8 @@ class TwoSameImpurities(Crystal):
             "---Ask user for parameters---"
             R = float(input('Enter position of impurity (in compton lenght units): '))
             Z_i, Z_p = [float(elem) for elem in \
-                        input('Enter charges of impurity and charge carrier in elementary charge units: ').split()]
+                        input('Enter charges of impurity and charge carrier\
+                         in elementary charge units: ').split()]
             N = 1 + int(input('Enter the number of grid points: '))
             N_nodes = int(input('Enter the number of nodes: '))
 
@@ -105,12 +109,15 @@ class TwoSameImpurities(Crystal):
             "---Plot results---"
             plt.plot(x, [psi[i][0][0] for i in range(N)], 'r')
             plt.plot(x, [psi[i][1][0] for i in range(N)], 'b')
-            # plt.plot(x, [pow(psi[i][0][0], 2) + pow(psi[i][1][0], 2) for i in range(N)], 'b')
+            # plt.plot(x, [pow(psi[i][0][0], 2) + pow(psi[i][1][0], 2) \
+            # for i in range(N)], 'b')
             plt.gcf().subplots_adjust(bottom=0.15)
-            plt.title(r'$\delta = {0} \lambdabar_c, Z = {1}, R = {2} \lambdabar_c$'.format(crystal.DELTA, Z_i*Z_p, R), \
-                      fontsize = 30,  verticalalignment = 'bottom')
+            plt.title(r'$\delta = {0} \lambdabar_c, Z = {1}, R = {2} \lambdabar_c$'.\
+                      format(crystal.DELTA, Z_i*Z_p, R), fontsize = 30, \
+                      verticalalignment = 'bottom')
             plt.xlabel(r'$x (\lambdabar_c)$', fontsize = 30)
-            plt.ylabel(r'$\psi$  ', rotation='horizontal', verticalalignment = 'bottom', fontsize = 30)
+            plt.ylabel(r'$\psi$  ', rotation='horizontal', \
+                       verticalalignment = 'bottom', fontsize = 30)
             plt.show()
 
             "---Ask user if he wants to save reults---"
@@ -215,7 +222,8 @@ class TwoSameImpurities(Crystal):
         e_vs_R_data_dir = crystal.delta_dir() + '/e_vs_R/data/'
 
         for i in range(nproc):
-            proc = mp.Process(target=TwoSameImpurities.e_f_R, args=(Z_i, Z_p, R_lst, e_lst, nproc, i))
+            proc = mp.Process(target=TwoSameImpurities.e_f_R, \
+                              args=(Z_i, Z_p, R_lst, e_lst, nproc, i))
             processes.append(proc)
             proc.start()
         for proc in processes:
@@ -246,7 +254,8 @@ class TwoSameImpurities(Crystal):
                   fontsize = 30,  verticalalignment = 'bottom')
         plt.xlabel(r'$R (\lambdabar_c)$', fontsize = 30)
         plt.ylabel(r'$\epsilon$  ', rotation='horizontal', \
-                   verticalalignment = 'bottom', horizontalalignment='right', fontsize = 30)
+                   verticalalignment = 'bottom', horizontalalignment='right', \
+                   fontsize = 30)
         plt.plot(R_lst, e_lst, 'b')
         plt.show()
 
@@ -258,7 +267,8 @@ class TwoSameImpurities(Crystal):
             path: path to file with data.
 
         Returns:
-            Tuple of cut-off parameter, impurity charge, list of impurity positions and list of energies.
+            Tuple of cut-off parameter, impurity charge,
+            list of impurity positions and list of energies.
 
         """
         dlt = float(re.findall('delta=(.*?)/', path, re.DOTALL)[0])
@@ -319,7 +329,8 @@ class TwoSameImpurities(Crystal):
         e_vs_Z_data_dir = crystal.delta_dir() + '/e_vs_Z/data/'
 
         for i in range(nproc):
-            proc = mp.Process(target=TwoSameImpurities.e_f_R, args=(R, Z_p, Z_lst, e_lst, nproc, i))
+            proc = mp.Process(target=TwoSameImpurities.e_f_R, \
+                              args=(R, Z_p, Z_lst, e_lst, nproc, i))
             processes.append(proc)
             proc.start()
         for proc in processes:
@@ -346,11 +357,12 @@ class TwoSameImpurities(Crystal):
             e_lst: list of energy values.
 
         """
-        plt.title(r'$\delta = {0} \lambdabar_c, R = {1} \lambdabar_c$'.format(dlt, R), \
-                  fontsize = 30,  verticalalignment = 'bottom')
+        plt.title(r'$\delta = {0} \lambdabar_c, R = {1} \lambdabar_c$'.\
+                  format(dlt, R), fontsize = 30,  verticalalignment = 'bottom')
         plt.xlabel('Z', fontsize = 30)
         plt.ylabel(r'$\epsilon$  ', rotation='horizontal', \
-                   verticalalignment = 'bottom', horizontalalignment='right', fontsize = 30)
+                   verticalalignment = 'bottom', horizontalalignment='right', \
+                   fontsize = 30)
         plt.plot(Z_lst, e_lst, 'b')
         plt.show()
 
@@ -362,7 +374,8 @@ class TwoSameImpurities(Crystal):
             path: path to file with data.
 
         Returns:
-            Tuple of cut-off parameter, impurity position, list of impurity charges and list of energies.
+            Tuple of cut-off parameter, impurity position,
+            list of impurity charges and list of energies.
 
         """
         dlt = float(re.findall('delta=(.*?)/', path, re.DOTALL)[0])
@@ -382,7 +395,8 @@ class TwoSameImpurities(Crystal):
             Analytical upper bound of critical charge.
 
         """
-        return np.pi*0.5 / (np.log(0.5/self.DELTA) * self.FINE_STRUCTURE_CONSTANT * np.abs(self.Z_p))
+        return np.pi*0.5 / (np.log(0.5/self.DELTA) * \
+                            self.FINE_STRUCTURE_CONSTANT * np.abs(self.Z_p))
 
     def find_Zcr(self, Z_bounds):
         """Find critical charge for given impurity position.
@@ -450,7 +464,8 @@ class TwoSameImpurities(Crystal):
 
     @staticmethod
     def Zcr_from_R(Z_p, R_min, R_max, N, filename=None):
-        """Calculate critical charge dependence on impurity position, save and plot results.
+        """Calculate critical charge dependence on impurity position,
+        save and plot results.
 
         Args:
             Z_p: charge of particle in elementary charge units.
@@ -474,10 +489,12 @@ class TwoSameImpurities(Crystal):
         Zcr_vs_R_data_dir = TwoSameImpurities.delta_dir() + '/Zcr_vs_R/data/'
 
         crystal.A = [-R_max, R_max]
-        Z_up = crystal.find_Zcr(Crystal.Bounds(up = Zcr_upper, down = (Zcr_upper + 0.1) / 2))
+        Z_up = crystal.find_Zcr(Crystal.Bounds(up = Zcr_upper,
+                                               down = (Zcr_upper + 0.1) / 2))
 
         crystal.A = [-R_min, R_min]
-        Z_down = crystal.find_Zcr(Crystal.Bounds(up = Z_up, down = (Z_up - 0.01) / 2))
+        Z_down = crystal.find_Zcr(Crystal.Bounds(up = Z_up,
+                                                 down = (Z_up - 0.01) / 2))
 
         print("Z_up = ", Z_up)
         print("Z_down = ", Z_down)
@@ -485,7 +502,8 @@ class TwoSameImpurities(Crystal):
         Zcr_lst[0] = Z_down
         Zcr_lst[-1] = Z_up
         for i in range(nproc):
-            proc = mp.Process(target=TwoSameImpurities.Z_f_R, args=(Z_p, R_lst, Zcr_lst, nproc, i))
+            proc = mp.Process(target=TwoSameImpurities.Z_f_R,
+                              args=(Z_p, R_lst, Zcr_lst, nproc, i))
             processes.append(proc)
             proc.start()
         for proc in processes:
@@ -509,7 +527,8 @@ class TwoSameImpurities(Crystal):
             path: path to file with data.
 
         Returns:
-            Tuple of cut-off parameter, list of impurity positions and list of impurity critical charges.
+            Tuple of cut-off parameter, list of impurity positions and
+            list of impurity critical charges.
 
         """
         dlt = float(re.findall('delta=(.*?)/', path, re.DOTALL)[0])
@@ -530,8 +549,10 @@ class TwoSameImpurities(Crystal):
 
         """
         plt.plot(R_lst, Zcr_lst, 'b')
-        plt.title(r'$\delta = {0} \lambdabar_c$'.format(dlt), fontsize = 30,  verticalalignment = 'bottom')
+        plt.title(r'$\delta = {0} \lambdabar_c$'.format(dlt),
+                  fontsize = 30,  verticalalignment = 'bottom')
         plt.xlabel(r'$R (\lambdabar_c)$', fontsize = 30)
-        plt.ylabel(r'$Z_{cr}$  ', rotation='horizontal', \
-                   verticalalignment = 'bottom', horizontalalignment='right', fontsize = 30)
+        plt.ylabel(r'$Z_{cr}$  ', rotation='horizontal',
+                   verticalalignment = 'bottom',
+                   horizontalalignment='right', fontsize = 30)
         plt.show()

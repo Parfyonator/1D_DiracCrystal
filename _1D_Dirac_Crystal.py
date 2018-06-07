@@ -21,7 +21,8 @@ import matplotlib.pyplot as plt
 
 
 class Crystal:
-    """Class that represents 1D finite crystal given by impurity positions and their charges.
+    """Class that represents 1D finite crystal given by impurity positions
+    and their charges.
     """
 
     "---Some constants---"
@@ -32,7 +33,8 @@ class Crystal:
     ELEMENTARY_CHARGE = 1.6021766208e-19
     GAMMA = 5.059074323e-8
 
-    FINE_STRUCTURE_CONSTANT = np.power(ELEMENTARY_CHARGE, 2)/(2*ELECTRIC_CONSTANT*SPEED_OF_LIGHT*PLANK_CONSTANT)
+    FINE_STRUCTURE_CONSTANT = np.power(ELEMENTARY_CHARGE, 2)/\
+                              (2*ELECTRIC_CONSTANT*SPEED_OF_LIGHT*PLANK_CONSTANT)
 
     # m * c / h_bar
     X_MULT = 2*np.pi*ELECTRON_MASS*SPEED_OF_LIGHT/PLANK_CONSTANT
@@ -148,7 +150,8 @@ class Crystal:
             Value of x-derivative Whittaker function W_{k,m} function at point x.
 
         """
-        return ( (k - 0.5*x) * Crystal.WhittakerW(k, m, x) - (m*m - pow(k-0.5, 2)) * Crystal.WhittakerW(k-1, m, x) ) / x
+        return ( (k - 0.5*x) * Crystal.WhittakerW(k, m, x) - \
+                 (m*m - pow(k-0.5, 2)) * Crystal.WhittakerW(k-1, m, x) ) / x
 
     def V(self, x):
         """"Calculates the potential of impurities at given position x.
@@ -187,11 +190,13 @@ class Crystal:
 
         """
         N = len(x)
-        s = sum([(psi[i][0][0]**2 + psi[i][1][0]**2) * (x[i+1] - x[i]) for i in range(N-1)])
+        s = sum([(psi[i][0][0]**2 + psi[i][1][0]**2) * \
+                 (x[i+1] - x[i]) for i in range(N-1)])
         psi /= np.sqrt(s)
 
     def h(self, x, e):
-        """Calculates at given point 2x2 matrix at the rhs of the equation given in the description.
+        """Calculates at given point 2x2 matrix at the rhs of the equation
+        given in the description.
 
         Args:
             x: point of evaluation.
@@ -222,7 +227,8 @@ class Crystal:
 
         """
         return sum([np.abs(z) * np.sign(x-a) * \
-                    np.log((np.abs(x-a) + self.DELTA) / self.DELTA) for a, z in zip(self.A, self.Z)])
+                    np.log((np.abs(x-a) + self.DELTA) / self.DELTA) \
+                    for a, z in zip(self.A, self.Z)])
 
     def r_2_x(self, r):
         """Turn r into x.
@@ -255,7 +261,8 @@ class Crystal:
 
     @staticmethod
     def round_seconds(current_datetime):
-        """Round seconds of the given datetime to integer value and return datetime as a string.
+        """Round seconds of the given datetime to integer value
+        and return datetime as a string.
 
         Args:
             current_datetime: current date and time.
@@ -298,7 +305,8 @@ class Crystal:
             r'(x).
 
         """
-        return sum([np.abs(z) / (np.abs(x-a) + self.DELTA) for a, z in zip(self.A, self.Z)])
+        return sum([np.abs(z) / (np.abs(x-a) + self.DELTA) \
+                    for a, z in zip(self.A, self.Z)])
 
     def calculate(self, N, N_nodes):
         """Find energy and wave function for given conditions.
@@ -350,7 +358,8 @@ class Crystal:
 
             "---Plot results---"
             # print(e)
-            # plt.plot(x, [psi[i][0][0] for i in range(N)], 'r'); plt.show(block=False); plt.pause(0.1); plt.clf()
+            # plt.plot(x, [psi[i][0][0] for i in range(N)], 'r')
+            # plt.show(block=False); plt.pause(0.1); plt.clf()
 
         "---Normalize wave functions---"
         self.normalize(psi, x)
@@ -516,7 +525,8 @@ class Crystal:
         if not filenames:
             data_dir = self.crystal_dir() + '/LDOS/data/'
             filenames = [data_dir + f for f in os.listdir(data_dir) \
-                         if os.path.isfile(data_dir + f) and int(f.split('.')[0]) in level_rng]
+                         if os.path.isfile(data_dir + f) and \
+                         int(f.split('.')[0]) in level_rng]
             delta = self.DELTA
         else:
             A = []
@@ -553,7 +563,8 @@ class Crystal:
                 max_range_idx = i
         X = x_lst[max_range_idx] # sorted(list(set(X)))
         delta_e = max(e_lst) - min(e_lst)
-        e_grid = np.linspace(min(e_lst) - 0.001*delta_e, max(e_lst) + 0.001*delta_e, e_grid_N)
+        e_grid = np.linspace(min(e_lst) - 0.001*delta_e, \
+                             max(e_lst) + 0.001*delta_e, e_grid_N)
 
         N = len(X)
         num_of_levels = len(e_lst)
@@ -567,8 +578,10 @@ class Crystal:
                     new_rho.append(rho_lst[level][idx])
                 else:
                     (left, right) = Crystal.find_neighbours(x_lst[level], X[i])
-                    new_rho.append(Crystal.interpolate(rho_lst[level][left], x_lst[level][left], \
-                                               rho_lst[level][right], x_lst[level][right], X[i]))
+                    new_rho.append(Crystal.interpolate(rho_lst[level][left], \
+                                                       x_lst[level][left], \
+                                                       rho_lst[level][right], \
+                                                       x_lst[level][right], X[i]))
 
             rho_lst[level] = new_rho[:]
         print('Finished recalculation.')
@@ -578,7 +591,8 @@ class Crystal:
         for e_i in range(e_grid_N):
             for x_i in range(N):
                 for level in range(num_of_levels):
-                    LDOS[e_i][x_i] += rho_lst[level][x_i] * Crystal.delta_func(self, e_lst[level], e_grid[e_i])
+                    LDOS[e_i][x_i] += rho_lst[level][x_i] * \
+                                      Crystal.delta_func(self, e_lst[level], e_grid[e_i])
 
         # log(LDOS)
         for e_i in range(e_grid_N):
@@ -590,10 +604,12 @@ class Crystal:
         # e_grid = [log_transform(e, 10, 1) for e in e_grid]
         plt.contourf(X, e_grid, LDOS, 1000)
         # plt.colorbar()
-        plt.title(r'$\delta = {0} \lambdabar_c$'.format(delta), fontsize = 30,  verticalalignment = 'bottom')
+        plt.title(r'$\delta = {0} \lambdabar_c$'.format(delta), \
+                  fontsize = 30,  verticalalignment = 'bottom')
         plt.xlabel(r'$x$', fontsize = 30, labelpad=-5)
         plt.ylabel(r'$\epsilon$  ', rotation='horizontal', \
-                   verticalalignment = 'bottom', horizontalalignment='right', fontsize = 30)
+                   verticalalignment = 'bottom', horizontalalignment='right', \
+                   fontsize = 30)
         # plt.yscale('log')
         plt.show()
 
@@ -612,10 +628,12 @@ class Crystal:
         N = len(x)
         plt.plot(x, [psi[i][0][0] for i in range(N)], 'r')
         plt.plot(x, [psi[i][1][0] for i in range(N)], 'b')
-        plt.title(r'$\delta = {0} \lambdabar_c$'.format(self.DELTA), fontsize = 30,  verticalalignment = 'bottom')
+        plt.title(r'$\delta = {0} \lambdabar_c$'.format(self.DELTA), \
+                  fontsize = 30,  verticalalignment = 'bottom')
         plt.xlabel(r'$x (\lambdabar_c)$', fontsize = 30)
         plt.ylabel(r'$\psi$  ', rotation='horizontal', \
-                   verticalalignment = 'bottom', horizontalalignment='right', fontsize = 30)
+                   verticalalignment = 'bottom', horizontalalignment='right', \
+                   fontsize = 30)
         plt.show()
 
     @staticmethod
@@ -635,7 +653,8 @@ class Crystal:
                   fontsize = 30,  verticalalignment = 'bottom')
         plt.xlabel(r'$x (\lambdabar_c)$', fontsize = 30)
         plt.ylabel(r'$\psi$  ', rotation='horizontal', \
-                   verticalalignment = 'bottom', horizontalalignment='right', fontsize = 30)
+                   verticalalignment = 'bottom', horizontalalignment='right', \
+                   fontsize = 30)
         plt.show()
 
     def save_level(self, e, n, psi, x):
@@ -651,7 +670,8 @@ class Crystal:
         with open(self.crystal_dir() + '/levels/data/' + str(n) + '.txt', 'w') as out:
             out.write(str(e) + '\n')
             out.write(str(len(x)) + '\n')
-            out.write(' '.join(['({},{})'.format(a, z) for a, z in zip(self.A, self.Z)]) + '\n')
+            out.write(' '.join(['({},{})'.format(a, z) for a, z in \
+                                zip(self.A, self.Z)]) + '\n')
             for psi_i, x_i in zip(psi, x):
                 out.write(' '.join([str(x_i), str(psi_i[0][0]), str(psi_i[1][0])]) + '\n')
 
@@ -663,8 +683,8 @@ class Crystal:
             path: path to file with data.
 
         Returns:
-            Tuple of energy, level number, wave function vector, x-grid, list of impurity positions and
-            list of impurity charges.
+            Tuple of energy, level number, wave function vector,x-grid,
+            list of impurity positions and list of impurity charges.
 
         """
         n = int(path.split('/')[-1].split('.')[0])
@@ -695,7 +715,8 @@ class Crystal:
             Relative directory path.
 
         """
-        return './Results' + '/alpha=' + str(self.FINE_STRUCTURE_CONSTANT) + '/delta=' + str(self.DELTA) + '/' + \
+        return './Results' + '/alpha=' + str(self.FINE_STRUCTURE_CONSTANT) + \
+               '/delta=' + str(self.DELTA) + '/' + \
                ' '.join(['({},{})'.format(a, z) for a, z in zip(self.A, self.Z)])
 
     @staticmethod
@@ -725,7 +746,8 @@ class Crystal:
         upper_dir += '/delta=' + str(self.DELTA)
         self.create_dir(upper_dir)
 
-        upper_dir += '/' + ' '.join(['({},{})'.format(a, z) for a, z in zip(self.A, self.Z)])
+        upper_dir += '/' + ' '.join(['({},{})'.format(a, z) for a, z in \
+                                     zip(self.A, self.Z)])
         self.create_dir(upper_dir)
 
         self.create_dir(upper_dir + '/levels')
