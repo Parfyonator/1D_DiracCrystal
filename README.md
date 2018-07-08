@@ -1,1 +1,2 @@
-# 1D_DiracCrystal
+# 1D Dirac Crystal
+Files `_1D_Dirac_Crystal.py` and `two_identical_impurities.py` contain classses *Crystal* and *TwoSameImpurities*. Class *Crystal* represents one-dimentional crystal of charged impurities of finite size. Class *TwoSameImpurities* corresponds to the special case of 2 identical positively charged impurities. Fields of these calasses describe the crystal characteristics and methods may be used to calculate the eigenstates (bound state energies and corresponding wavefunctions), local density of states (LDOS) and its dependence on crystal parameters. File `main.py` provides an example of use.
